@@ -23,5 +23,5 @@ jobs:
           S3_BACKET_NAME: ${{ secrets.S3_BACKET_NAME }}
           
         run: |
-          aws s3 cp . s3://$S3_BACKET_NAME/ --quiet.
+          aws s3 cp --recursive --region ap-northeast-1 . s3://$S3_BACKET_NAME
         
