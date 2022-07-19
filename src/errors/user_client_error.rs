@@ -1,4 +1,4 @@
-use axum::{response::IntoResponse, http};
+use axum::{http, response::IntoResponse};
 use rusoto_core::RusotoError;
 use rusoto_dynamodb::GetItemError;
 use thiserror::Error;
@@ -6,15 +6,33 @@ use thiserror::Error;
 pub enum UserClientError {
     #[error("cannot get session from dynamo")]
     RusotoError(#[from] RusotoError<GetItemError>),
-    #[error("CannotParseSession")]
-    SessionParseError, 
+    #[error("cannot parse session from cookie")]
+    SessionParseError(SessionParseError),
 }
 
-impl IntoResponse for UserClientError{
+#[derive(Debug)]
+pub struct SessionParseError {
+    reson: SessionParseErrorReason,
+}
+
+#[derive(Debug)]
+pub enum SessionParseErrorReason {
+    CookieisMissing,
+    SessionisMissing,
+}
+
+impl SessionParseError {
+    pub fn new(reason: SessionParseErrorReason) -> Self {
+        SessionParseError { reson: reason }
+    }
+}
+
+impl IntoResponse for UserClientError {
     fn into_response(self) -> axum::response::Response {
         match self {
-            UserClientError::RusotoError(_) | 
-            UserClientError::SessionParseError  => http::StatusCode::UNAUTHORIZED.into_response(),
+            UserClientError::RusotoError(_) | UserClientError::SessionParseError(_) => {
+                (http::StatusCode::UNAUTHORIZED, "Unauthrised").into_response()
+            }
         }
     }
 }

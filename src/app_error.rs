@@ -11,10 +11,10 @@ impl From<RusotoError<GetItemError>> for AppError {
         AppError::RusotoError(err)
     }
 }
-impl IntoResponse for AppError{
+impl IntoResponse for AppError {
     fn into_response(self) -> axum::response::Response {
         match self {
-            AppError::RusotoError(err) => http::StatusCode::UNAUTHORIZED.into_response(),
+            AppError::RusotoError(_) => http::StatusCode::UNAUTHORIZED.into_response(),
         }
     }
 }
