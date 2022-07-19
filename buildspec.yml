@@ -1,0 +1,18 @@
+version: 0.2
+
+phases:
+  install:
+    commands:
+    # install rust
+      - curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --profile minimal
+  build:
+    commands:
+      - ls
+      # build Rust binary
+      - cargo build --release
+      # binary name must be "bootstrap" for Lambda custom runtime
+      - mv target/release/YOUR_PROJECT_NAME bootstrap
+      # strip & check size, dependencies
+      - strip --strip-all bootstrap
+      - size bootstrap
+      - ldd bootstrap
