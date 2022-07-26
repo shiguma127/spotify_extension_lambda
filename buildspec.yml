@@ -3,7 +3,7 @@ version: 0.2
 phases:
   install:
     commands:
-    # install rust
+      # install rust
       - curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --profile minimal
       - source "$HOME/.cargo/env"
   build:
@@ -12,8 +12,12 @@ phases:
       # build Rust binary
       - cargo build --release
       # binary name must be "bootstrap" for Lambda custom runtime
-      - mv target/release/YOUR_PROJECT_NAME bootstrap
+      - mv target/release/spotify_extension_lambda bootstrap
       # strip & check size, dependencies
       - strip --strip-all bootstrap
       - size bootstrap
       - ldd bootstrap
+
+artifacts:
+  files:
+    - bootstrap
