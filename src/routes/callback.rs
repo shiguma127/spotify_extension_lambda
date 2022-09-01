@@ -6,6 +6,7 @@ use axum::{
     response::IntoResponse,
     Extension,
 };
+use chrono::Duration;
 use rspotify::{clients::OAuthClient, AuthCodeSpotify};
 use rusoto_dynamodb::{DynamoDb, DynamoDbClient, PutItemInput};
 use serde_dynamo::to_item;
@@ -28,18 +29,19 @@ pub async fn get(
         .unwrap()
         .clone();
     let session_id = uuid::Uuid::new_v4();
+    let session_expire = chrono::Utc::now() + Duration::days(30);
     let session = Session {
         session_id: session_id.clone(),
         token_json_string: serde_json::to_string(&access_token).unwrap(),
-        //token: access_token,
+        session_expire: session_expire.timestamp(), //token: access_token,
     };
     /*
-     *Scopesがスペース区切りでシリアライズされているせいでデシリアライズできない
-        thread 'tokio-runtime-worker' panicked at 'called `Result::unwrap()` on an `Err` value: Error(Message("invalid type: string \"user-read-playback-state user-read-currently-playing\", expected a borrowed string"))', src\user_client.rs:75:39
-     * jsonではカンマ区切りのオブジェクトになっている
-     * RSpotifyのカスタムシリアライザの意味ある？
-     * 要検証
-     */
+    *Scopesがスペース区切りでシリアライズされているせいでデシリアライズできない
+       thread 'tokio-runtime-worker' panicked at 'called `Result::unwrap()` on an `Err` value: Error(Message("invalid type: string \"user-read-playback-state user-read-currently-playing\", expected a borrowed string"))', src\user_client.rs:75:39
+    * jsonではカンマ区切りのオブジェクトになっている
+    * RSpotifyのカスタムシリアライザの意味ある？
+    * 要検証
+    */
 
     let item = to_item(session).unwrap();
     let input_item = PutItemInput {
@@ -54,8 +56,9 @@ pub async fn get(
     headers.insert(
         "Set-Cookie",
         HeaderValue::from_str(&format!(
-            "sessionid={}; SameSite=none; Path=/; secure",
-            session_id
+            "sessionid={}; SameSite=none; Path=/; secure; Max-Age={}",
+            session_id,
+            2592000 //30days
         ))
         .unwrap(),
     );

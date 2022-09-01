@@ -13,7 +13,7 @@ use serde_dynamo::from_item;
 
 use crate::{
     errors::user_client_error::{SessionParseError, SessionParseErrorReason, UserClientError},
-    session::{Session, self},
+    session::{self, Session},
 };
 
 pub struct UserClient(AuthCodeSpotify);
@@ -71,10 +71,18 @@ where
         };
 
         let output = dynamo_client.get_item(input).await?;
-        let item = output.item.unwrap();
+        let item = match output.item {
+            Some(item) => item,
+            None => {
+                return Err(UserClientError::SessionParseError(SessionParseError::new(
+                    SessionParseErrorReason::CookieisMissing,
+                )))
+            }
+        };
+
         let session = from_item(item).unwrap();
-        let session :Session = session;
-        let token :Token =  serde_json::from_str(&session.token_json_string).unwrap();
+        let session: Session = session;
+        let token: Token = serde_json::from_str(&session.token_json_string).unwrap();
         let spotify_client = AuthCodeSpotify::from_token(token);
         let user_client = UserClient(spotify_client);
         Ok(user_client)

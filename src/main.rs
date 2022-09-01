@@ -24,7 +24,6 @@ async fn main() -> Result<(), LambdaError> {
         scopes: scopes!("user-read-currently-playing", "user-read-playback-state"),
         ..Default::default()
     };
-    
     let spotify_client = AuthCodeSpotify::new(credentials, oauth);
     let app = Router::new()
         .route("/", get(routes::index::get))
