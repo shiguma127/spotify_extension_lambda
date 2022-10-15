@@ -1,15 +1,18 @@
 use axum::{extract::Extension, routing::get, Router};
+use dotenv::dotenv;
 use lambda_web::{is_running_on_lambda, run_hyper_on_lambda, LambdaError};
+use middleware::cors_layer;
 use rspotify::{scopes, AuthCodeSpotify, Credentials, OAuth};
 use rusoto_dynamodb::DynamoDbClient;
-use std::{net::SocketAddr};
-use dotenv::dotenv;
+use std::net::SocketAddr;
+
 mod app_error;
-mod errors;
-mod routes;
-mod user_client;
-mod session;
 mod auth_code;
+mod errors;
+mod middleware;
+mod routes;
+mod session;
+mod user_client;
 
 #[tokio::main]
 async fn main() -> Result<(), LambdaError> {
@@ -30,13 +33,15 @@ async fn main() -> Result<(), LambdaError> {
         .route("/login", get(routes::login::get))
         .route("/callback", get(routes::callback::get))
         .layer(Extension(spotify_client))
-        .layer(Extension(dynamo));
+        .layer(Extension(dynamo))
+        .layer(cors_layer::cors());
     if is_running_on_lambda() {
         // Run app on AWS Lambda
         run_hyper_on_lambda(app).await?;
     } else {
         // Run app on local server
         let addr = SocketAddr::from(([127, 0, 0, 1], 8080));
+        println!("running on {}", addr);
         axum::Server::bind(&addr)
             .serve(app.into_make_service())
             .await?;
