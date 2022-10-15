@@ -13,7 +13,7 @@ use serde_dynamo::from_item;
 
 use crate::{
     errors::user_client_error::{SessionParseError, SessionParseErrorReason, UserClientError},
-    session::{self, Session},
+    session::Session,
 };
 
 pub struct UserClient(AuthCodeSpotify);

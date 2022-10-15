@@ -1,3 +1,3 @@
-pub mod index;
 pub mod callback;
+pub mod index;
 pub mod login;

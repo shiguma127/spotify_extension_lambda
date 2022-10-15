@@ -1,4 +1,4 @@
-use std::{fmt::Display};
+use std::fmt::Display;
 
 use axum::response::IntoResponse;
 use rspotify::ClientError;
@@ -19,7 +19,7 @@ impl Display for SpotifyError {
     }
 }
 
-impl  IntoResponse for SpotifyError {
+impl IntoResponse for SpotifyError {
     fn into_response(self) -> axum::response::Response {
         format!("{}", self).into_response()
     }
