@@ -16,6 +16,8 @@ use crate::{
     session::Session,
 };
 
+use log::info;
+
 pub struct UserClient(AuthCodeSpotify);
 
 impl From<AuthCodeSpotify> for UserClient {
@@ -41,6 +43,7 @@ where
         let cookie = match cookie {
             Ok(cookie) => cookie,
             Err(_) => {
+                info!("{}\nTypedHeader'{:?}","cant get cookie", cookie);
                 return Err(UserClientError::SessionParseError(SessionParseError::new(
                     SessionParseErrorReason::CookieisMissing,
                 )))
@@ -49,6 +52,7 @@ where
         let session_id = match cookie.get("sessionid") {
             Some(session_id) => session_id.to_string(),
             None => {
+                info!("{}\ncookie:{:?}","request header has not have sessionid",cookie);
                 return Err(UserClientError::SessionParseError(SessionParseError::new(
                     SessionParseErrorReason::SessionisMissing,
                 )));
@@ -79,12 +83,13 @@ where
                 )))
             }
         };
-
+        
         let session = from_item(item).unwrap();
         let session: Session = session;
         let token: Token = serde_json::from_str(&session.token_json_string).unwrap();
         let spotify_client = AuthCodeSpotify::from_token(token);
         let user_client = UserClient(spotify_client);
+        info!("{}","restored user_client successflly.");
         Ok(user_client)
     }
 }

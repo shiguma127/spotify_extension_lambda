@@ -1,7 +1,9 @@
-use axum::{extract::Extension, routing::get, Router};
+use axum::{extract::Extension, middleware, routing::get, Router};
 use dotenv::dotenv;
+use env_logger;
 use lambda_web::{is_running_on_lambda, run_hyper_on_lambda, LambdaError};
-use middleware::cors_layer;
+use log::{info, warn};
+use middlewares::{cors_layer, logging_request};
 use rspotify::{scopes, AuthCodeSpotify, Credentials, OAuth};
 use rusoto_dynamodb::DynamoDbClient;
 use std::net::SocketAddr;
@@ -9,7 +11,7 @@ use std::net::SocketAddr;
 mod app_error;
 mod auth_code;
 mod errors;
-mod middleware;
+mod middlewares;
 mod routes;
 mod session;
 mod user_client;
@@ -17,6 +19,7 @@ mod user_client;
 #[tokio::main]
 async fn main() -> Result<(), LambdaError> {
     dotenv().ok();
+    env_logger::init();
     let credentials = Credentials {
         id: std::env::var("CLIENT_ID")?,
         secret: Some(std::env::var("CLIENT_SECRET")?),
@@ -34,6 +37,7 @@ async fn main() -> Result<(), LambdaError> {
         .route("/callback", get(routes::callback::get))
         .layer(Extension(spotify_client))
         .layer(Extension(dynamo))
+        .layer(middleware::from_fn(logging_request::logging))
         .layer(cors_layer::cors());
     if is_running_on_lambda() {
         // Run app on AWS Lambda
