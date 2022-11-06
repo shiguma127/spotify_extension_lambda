@@ -17,7 +17,6 @@ phases:
       - strip --strip-all bootstrap
       - size bootstrap
       - ldd bootstrap
-
-artifacts:
-  files:
-    - bootstrap
+      - zip bootstrap.zip bootstrap
+      - aws s3 cp bootstrap.zip s3://spotify-extension-src/bootstrap.zip
+      - aws lambda update-function-code --function-name arn:aws:lambda:ap-northeast-1:312678712486:function:SpotifyExtension --s3-bucket spotify-extension-src --s3-key bootstrap.zip
