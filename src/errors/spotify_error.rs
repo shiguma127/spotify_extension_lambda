@@ -1,26 +1,26 @@
 use std::fmt::Display;
 
-use axum::response::IntoResponse;
+use axum::{http::StatusCode, response::IntoResponse};
 use rspotify::ClientError;
 use thiserror::Error;
-
 #[derive(Debug, Error)]
-pub struct SpotifyError(ClientError);
+pub struct SpotifyClientError(ClientError);
 
-impl From<ClientError> for SpotifyError {
+impl From<ClientError> for SpotifyClientError {
     fn from(error: ClientError) -> Self {
-        SpotifyError(error)
+        SpotifyClientError(error)
     }
 }
 
-impl Display for SpotifyError {
+impl Display for SpotifyClientError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.0)
     }
 }
 
-impl IntoResponse for SpotifyError {
+impl IntoResponse for SpotifyClientError {
     fn into_response(self) -> axum::response::Response {
-        format!("{}", self).into_response()
+        log::error!("error: {}", self);
+        (StatusCode::INTERNAL_SERVER_ERROR, "INTERNAL_SERVER_ERROR").into_response()
     }
 }

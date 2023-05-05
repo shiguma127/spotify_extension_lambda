@@ -1,5 +1,5 @@
 use crate::session::Session;
-use crate::{auth_code::AuthCode, errors::spotify_error::SpotifyError};
+use crate::{auth_code::AuthCode, errors::spotify_error::SpotifyClientError};
 use axum::{
     extract::Query,
     http::{HeaderMap, HeaderValue, StatusCode},
@@ -17,9 +17,10 @@ pub async fn get(
 ) -> impl IntoResponse {
     let mut spotify = spotify_client.clone();
     if let Err(err) = spotify.request_token(&query.code).await {
-        return SpotifyError::from(err).into_response();
+        return SpotifyClientError::from(err).into_response();
     }
     //todo fix unwrap祭り
+    log::info!("trying get accsess_token");
     let access_token = spotify
         .token
         .lock()
@@ -28,6 +29,7 @@ pub async fn get(
         .as_ref()
         .unwrap()
         .clone();
+    log::info!("Successful get access token");
     let session_id = uuid::Uuid::new_v4();
     let session_expire = chrono::Utc::now() + Duration::days(30);
     let session = Session {

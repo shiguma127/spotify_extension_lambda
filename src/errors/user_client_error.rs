@@ -8,6 +8,8 @@ pub enum UserClientError {
     RusotoError(#[from] RusotoError<GetItemError>),
     #[error("cannot parse session from cookie")]
     SessionParseError(SessionParseError),
+    #[error("cannot parse session from cookie")]
+    TableMissingError(String),
 }
 
 #[derive(Debug)]
@@ -19,6 +21,7 @@ pub struct SessionParseError {
 pub enum SessionParseErrorReason {
     CookieisMissing,
     SessionisMissing,
+    CanNotParseDinamoItem,
 }
 
 impl SessionParseError {
@@ -30,8 +33,21 @@ impl SessionParseError {
 impl IntoResponse for UserClientError {
     fn into_response(self) -> axum::response::Response {
         match self {
-            UserClientError::RusotoError(_) | UserClientError::SessionParseError(_) => {
+            UserClientError::RusotoError(e) => {
+                log::error!("{:?}", e);
                 (http::StatusCode::UNAUTHORIZED, "Unauthrised").into_response()
+            }
+            UserClientError::SessionParseError(e) => {
+                log::info!("Failed to parse session. reason: {:?}", e.reson);
+                (http::StatusCode::UNAUTHORIZED, "UNAUTHORIZED").into_response()
+            }
+            UserClientError::TableMissingError(e) => {
+                log::error!("Faild to parse session. reason ({:?})", e);
+                (
+                    http::StatusCode::INTERNAL_SERVER_ERROR,
+                    "INTERNAL_SERVER_ERROR",
+                )
+                    .into_response()
             }
         }
     }

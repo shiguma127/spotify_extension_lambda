@@ -43,16 +43,19 @@ where
         let cookie = match cookie {
             Ok(cookie) => cookie,
             Err(_) => {
-                info!("{}\nTypedHeader'{:?}","cant get cookie", cookie);
+                info!("{}\nTypedHeader'{:?}", "cant get cookie", cookie);
                 return Err(UserClientError::SessionParseError(SessionParseError::new(
                     SessionParseErrorReason::CookieisMissing,
-                )))
+                )));
             }
         };
         let session_id = match cookie.get("sessionid") {
             Some(session_id) => session_id.to_string(),
             None => {
-                info!("{}\ncookie:{:?}","request header has not have sessionid",cookie);
+                info!(
+                    "{}\ncookie:{:?}",
+                    "request header has not have sessionid", cookie
+                );
                 return Err(UserClientError::SessionParseError(SessionParseError::new(
                     SessionParseErrorReason::SessionisMissing,
                 )));
@@ -68,8 +71,16 @@ where
         };
 
         let key = HashMap::<String, AttributeValue>::from([("session_id".to_string(), value)]);
+        let table_name = match std::env::var("SESSION_TABLE") {
+            Ok(table_name) => table_name,
+            Err(_) => {
+                return Err(UserClientError::TableMissingError(String::from(
+                    "can not get tablename from env. must set table name to SESSION_TABLE",
+                )))
+            }
+        };
         let input = GetItemInput {
-            table_name: std::env::var("SESSION_TABLE").unwrap().to_string(),
+            table_name: table_name,
             key,
             ..Default::default()
         };
@@ -83,13 +94,20 @@ where
                 )))
             }
         };
-        
-        let session = from_item(item).unwrap();
+
+        let session = match from_item(item) {
+            Ok(session) => session,
+            Err(_) => {
+                return Err(UserClientError::SessionParseError(SessionParseError::new(
+                    SessionParseErrorReason::CanNotParseDinamoItem,
+                )))
+            }
+        };
         let session: Session = session;
         let token: Token = serde_json::from_str(&session.token_json_string).unwrap();
         let spotify_client = AuthCodeSpotify::from_token(token);
         let user_client = UserClient(spotify_client);
-        info!("{}","restored user_client successflly.");
+        info!("{}", "restored user_client successflly.");
         Ok(user_client)
     }
 }
