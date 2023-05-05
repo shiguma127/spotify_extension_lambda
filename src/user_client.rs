@@ -7,7 +7,7 @@ use axum::{
     TypedHeader,
 };
 
-use rspotify::{AuthCodeSpotify, Token};
+use rspotify::{prelude::BaseClient, AuthCodeSpotify, Token};
 use rusoto_dynamodb::{AttributeValue, DynamoDb, DynamoDbClient, GetItemInput};
 use serde_dynamo::from_item;
 
@@ -106,6 +106,7 @@ where
         let session: Session = session;
         let token: Token = serde_json::from_str(&session.token_json_string).unwrap();
         let spotify_client = AuthCodeSpotify::from_token(token);
+        spotify_client.refresh_token().await.unwrap();
         let user_client = UserClient(spotify_client);
         info!("{}", "restored user_client successflly.");
         Ok(user_client)
