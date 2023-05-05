@@ -3,7 +3,7 @@ use dotenv::dotenv;
 use env_logger;
 use lambda_web::{is_running_on_lambda, run_hyper_on_lambda, LambdaError};
 use middlewares::{cors_layer, logging_request};
-use rspotify::{scopes, AuthCodeSpotify, Credentials, OAuth};
+use rspotify::{scopes, AuthCodeSpotify, Config, Credentials, OAuth};
 use rusoto_dynamodb::DynamoDbClient;
 use std::net::SocketAddr;
 
@@ -18,17 +18,21 @@ mod user_client;
 async fn main() -> Result<(), LambdaError> {
     dotenv().ok();
     env_logger::init();
+    let dynamo = DynamoDbClient::new(rusoto_core::Region::ApNortheast1);
     let credentials = Credentials {
         id: std::env::var("CLIENT_ID")?,
         secret: Some(std::env::var("CLIENT_SECRET")?),
     };
-    let dynamo = DynamoDbClient::new(rusoto_core::Region::ApNortheast1);
+    let config = Config {
+        token_refreshing: true,
+        ..Default::default()
+    };
     let oauth = OAuth {
         redirect_uri: std::env::var("CALLBACK_URI")?,
         scopes: scopes!("user-read-currently-playing", "user-read-playback-state"),
         ..Default::default()
     };
-    let spotify_client = AuthCodeSpotify::new(credentials, oauth);
+    let spotify_client = AuthCodeSpotify::with_config(credentials, oauth, config.clone());
     let app = Router::new()
         .route("/", get(routes::index::get))
         .route("/login", get(routes::login::get))
