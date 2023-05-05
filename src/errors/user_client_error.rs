@@ -34,7 +34,7 @@ impl IntoResponse for UserClientError {
     fn into_response(self) -> axum::response::Response {
         match self {
             UserClientError::RusotoError(e) => {
-                log::error!("{:?}", e);
+                log::error!("{:?}, rusoto error", e);
                 (http::StatusCode::UNAUTHORIZED, "Unauthrised").into_response()
             }
             UserClientError::SessionParseError(e) => {
