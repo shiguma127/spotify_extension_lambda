@@ -57,7 +57,7 @@ jobs:
         run: zip bootstrap.zip bootstrap
 
       - name: copy to s3
-        run: aws s3 cp bootstrap.zip s3://${{ env.S3_BUCKET_NAME }}/bootstrap.zip
+        run: aws s3 cp bootstrap.zip s3://${{ env.S3_BUCKET_NAME }}
 
       - name: update lambda function source
         run: |
