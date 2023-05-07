@@ -56,6 +56,9 @@ jobs:
       - name: zip artifact
         run: zip bootstrap.zip bootstrap
 
+      - name: debug aws
+        run: aws configure list
+
       - name: copy to s3
         run: aws s3 cp bootstrap.zip s3://${{ env.S3_BUCKET_NAME }}
 
