@@ -1,38 +1,27 @@
-name: Rust Build and Deploy
+name: Docker Compose CI/CD
 
 on:
   push:
-    branches: ["main"]
-
-  # Allows you to run this workflow manually from the Actions tab
-  workflow_dispatch:
+    branches:
+      - main
 
 env:
-  AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-  AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-  AWS_DEFAULT_REGION: ap-northeast-1
+  AWS_REGION: ap-northeast-1
+  AWS_ROLE_ARN: arn:aws:iam::312678712486:role/SpotifyExtentionAPI-CD
   S3_BUCKET_NAME: spotify-extension-src
   LAMBDA_FUNCTION_NAME: arn:aws:lambda:ap-northeast-1:312678712486:function:SpotifyExtension
-  CARGO_INCREMENTAL: 1 # rust のincremental build を強制する。
 
 jobs:
-  build-and-deploy:
+  deploy:
     runs-on: ubuntu-latest
+    # These permissions are needed to interact with GitHub's OIDC Token endpoint.
+    permissions:
+      id-token: write
+      contents: read
 
     steps:
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v1
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ap-northeast-1
-
       - name: Checkout repository
         uses: actions/checkout@v3
-        with:
-          fetch-depth: 0
-          # mtimeをコミットの時間で復元したいので 0 にしておく。
-          # TODO: 履歴が多くなったら十分大きな値にする。
 
       - name: use chahe v3
         uses: actions/cache@v3
@@ -45,23 +34,27 @@ jobs:
             target/
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
 
-      - name: setup rust tool chain
-        uses: dtolnay/rust-toolchain@stable
+      - name: Configure AWS credentials from IAM Role
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          role-to-assume: ${{ env.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
 
-      - name: Compile Rust program
-        run: cargo build --release
+        # Required for docker/build-push-action@v4
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
 
-      - name: rename artifact
-        run: mv target/release/spotify_extension_lambda bootstrap
+      # なぜか動かない
+      #- name: Build and push
+      #  uses: docker/build-push-action@v4
+      #  with:
+      #    context: .
+      #    cache-from: type=gha
+      #    cache-to: type=gha,mode=max
 
-      - name: strip & check size, dependencies
+      - name: Build
         run: |
-          strip --strip-all bootstrap
-          size bootstrap
-          ldd bootstrap
-
-      - name: zip artifact
-        run: zip bootstrap.zip bootstrap
+          ./build_lambda_function_executable.sh
 
       - name: copy to s3
         run: aws s3 cp bootstrap.zip s3://${{ env.S3_BUCKET_NAME }}
